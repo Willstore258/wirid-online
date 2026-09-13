@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wirid & Bacaan</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7f5;
+            color: #222;
+        }
+
+        header {
+            background: linear-gradient(135deg, #075e3b, #0b8f5a);
+            color: white;
+            padding: 25px 20px;
+            text-align: center;
+            border-radius: 0 0 25px 25px;
+        }
+
+        header h1 {
+            font-size: 27px;
+            margin-bottom: 7px;
+        }
+
+        header p {
+            opacity: .9;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        .search {
+            width: 100%;
+            padding: 14px 17px;
+            border: none;
+            border-radius: 14px;
+            background: white;
+            box-shadow: 0 3px 15px rgba(0,0,0,.08);
+            outline: none;
+            font-size: 15px;
+            margin-bottom: 18px;
+        }
+
+        .category {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .category button {
+            border: none;
+            background: white;
+            padding: 10px 16px;
+            border-radius: 20px;
+            white-space: nowrap;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        }
+
+        .category button.active {
+            background: #087f4f;
+            color: white;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,.07);
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card h2 {
+            color: #087f4f;
+            margin-bottom: 8px;
+        }
+
+        .card .type {
+            display: inline-block;
+            background: #e3f5ed;
+            color: #087f4f;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+
+        .arabic {
+            direction: rtl;
+            text-align: right;
+            font-size: 27px;
+            line-height: 2;
+            margin: 15px 0;
+            color: #222;
+        }
+
+        .latin {
+            font-style: italic;
+            color: #555;
+            line-height: 1.7;
+            margin-bottom: 10px;
+        }
+
+        .arti {
+            line-height: 1.7;
+            color: #444;
+        }
+
+        .detail {
+            display: none;
+        }
+
+        .detail.show {
+            display: block;
+        }
+
+        .back {
+            border: none;
+            background: #087f4f;
+            color: white;
+            padding: 11px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-bottom: 18px;
+        }
+
+        .counter {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .counter button {
+            border: none;
+            background: #087f4f;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .count-number {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px 10px;
+            color: #777;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #777;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1 id="appTitle">Wirid & Bacaan</h1>
+    <p id="appDescription">Kumpulan wirid, doa, dan bacaan</p>
+</header>
+
+<div class="container">
+
+    <div id="listPage">
+
+        <input
+            type="text"
+            id="search"
+            class="search"
+            placeholder="🔍 Cari wirid atau bacaan..."
+        >
+
+        <div id="categories" class="category"></div>
+
+        <div id="list"></div>
+
+    </div>
+
+    <div id="detailPage" class="detail">
+
+        <button class="back" onclick="showList()">
+            ← Kembali
+        </button>
+
+        <div class="card">
+
+            <span id="detailType" class="type"></span>
+
+            <h2 id="detailTitle"></h2>
+
+            <div id="detailArabic" class="arabic"></div>
+
+            <div id="detailLatin" class="latin"></div>
+
+            <div id="detailMeaning" class="arti"></div>
+
+            <div class="counter">
+                <button onclick="kurangi()">−</button>
+
+                <span id="counterNumber" class="count-number">
+                    0
+                </span>
+
+                <button onclick="tambah()">+</button>
+
+                <button onclick="resetCounter()">
+                    Reset
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<footer>
+    Wirid & Bacaan
+</footer>
+
+<script>
+
+let data = [];
+let currentCategory = "Semua";
+let currentItem = null;
+let counter = 0;
+
+
+/* ==========================
+   MEMBACA DATA JSON
+========================== */
+
+async function loadData() {
+
+    try {
+
+        const response = await fetch("data.json");
+
+        if (!response.ok) {
+            throw new Error("data.json tidak ditemukan");
+        }
+
+        const json = await response.json();
+
+        data = json.data || [];
+
+        if (json.app) {
+
+            document.getElementById("appTitle").textContent =
+                json.app.title || "Wirid & Bacaan";
+
+            document.getElementById("appDescription").textContent =
+                json.app.description || "";
+
+        }
+
+        tampilKategori();
+        tampilData();
+
+    } catch (error) {
+
+        document.getElementById("list").innerHTML = `
+            <div class="empty">
+                <h3>Data gagal dimuat</h3>
+                <p>${error.message}</p>
+                <br>
+                <p>Pastikan file <b>data.json</b> berada satu folder dengan index.html.</p>
+            </div>
+        `;
+
+    }
+
+}
+
+
+/* ==========================
+   KATEGORI
+========================== */
+
+function tampilKategori() {
+
+    const categories = document.getElementById("categories");
+
+    const listKategori = [
+        "Semua",
+        ...new Set(data.map(item => item.kategori))
+    ];
+
+    categories.innerHTML = "";
+
+    listKategori.forEach(kategori => {
+
+        const button = document.createElement("button");
+
+        button.textContent = kategori;
+
+        if (kategori === currentCategory) {
+            button.classList.add("active");
+        }
+
+        button.onclick = () => {
+
+            currentCategory = kategori;
+
+            tampilKategori();
+            tampilData();
+
+        };
+
+        categories.appendChild(button);
+
+    });
+
+}
+
+
+/* ==========================
+   MENAMPILKAN DATA
+========================== */
+
+function tampilData() {
+
+    const list = document.getElementById("list");
+
+    const keyword =
+        document.getElementById("search").value.toLowerCase();
+
+    let hasil = data.filter(item => {
+
+        const cocokKategori =
+            currentCategory === "Semua" ||
+            item.kategori === currentCategory;
+
+        const cocokSearch =
+            item.judul.toLowerCase().includes(keyword) ||
+            (item.arti || "").toLowerCase().includes(keyword);
+
+        return cocokKategori && cocokSearch;
+
+    });
+
+    if (hasil.length === 0) {
+
+        list.innerHTML = `
+            <div class="empty">
+                <h3>Tidak ada bacaan</h3>
+                <p>Coba kata pencarian lainnya.</p>
+            </div>
+        `;
+
+        return;
+    }
+
+    list.innerHTML = "";
+
+    hasil.forEach(item => {
+
+        const card = document.createElement("div");
+
+        card.className = "card";
+
+        card.innerHTML = `
+            <span class="type">
+                ${item.kategori}
+            </span>
+
+            <h2>
+                ${item.judul}
+            </h2>
+
+            <div class="arabic">
+                ${item.arab || ""}
+            </div>
+
+            <div class="arti">
+                ${item.arti || ""}
+            </div>
+        `;
+
+        card.onclick = () => bukaDetail(item);
+
+        list.appendChild(card);
+
+    });
+
+}
+
+
+/* ==========================
+   DETAIL
+========================== */
+
+function bukaDetail(item) {
+
+    currentItem = item;
+
+    document.getElementById("listPage").style.display = "none";
+
+    document.getElementById("detailPage").classList.add("show");
+
+    document.getElementById("detailType").textContent =
+        item.kategori || "";
+
+    document.getElementById("detailTitle").textContent =
+        item.judul || "";
+
+    document.getElementById("detailArabic").textContent =
+        item.arab || "";
+
+    document.getElementById("detailLatin").textContent =
+        item.latin || "";
+
+    document.getElementById("detailMeaning").textContent =
+        item.arti || "";
+
+    counter = 0;
+
+    updateCounter();
+
+}
+
+
+/* ==========================
+   KEMBALI
+========================== */
+
+function showList() {
+
+    document.getElementById("detailPage")
+        .classList.remove("show");
+
+    document.getElementById("listPage")
+        .style.display = "block";
+
+}
+
+
+/* ==========================
+   COUNTER
+========================== */
+
+function tambah() {
+
+    counter++;
+
+    updateCounter();
+
+}
+
+function kurangi() {
+
+    if (counter > 0) {
+        counter--;
+    }
+
+    updateCounter();
+
+}
+
+function resetCounter() {
+
+    counter = 0;
+
+    updateCounter();
+
+}
+
+function updateCounter() {
+
+    document.getElementById("counterNumber")
+        .textContent = counter;
+
+}
+
+
+/* ==========================
+   SEARCH
+========================== */
+
+document.getElementById("search")
+    .addEventListener("input", tampilData);
+
+
+/* ==========================
+   START
+========================== */
+
+loadData();
+
+</script>
+
+</body>
+</html>
